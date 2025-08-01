@@ -50,20 +50,23 @@ interface DigitalProduct {
   file_url: string;
   product_type: string;
   is_active: boolean;
-  downloads: number;
+  downloads_count: number;
   created_at: string;
 }
 
 const ContentManagement = () => {
   const [content, setContent] = useState<Content[]>([]);
   const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [newContentForm, setNewContentForm] = useState({
     title: '',
     description: '',
     content_type: 'video',
     category_id: '',
-    required_plan_id: ''
+    required_plan_id: '',
+    duration_minutes: 0,
+    difficulty_level: 'beginner'
   });
   const [newProductForm, setNewProductForm] = useState({
     name: '',
@@ -72,10 +75,16 @@ const ContentManagement = () => {
     product_type: 'ebook',
     file_url: ''
   });
+  const [newCategoryForm, setNewCategoryForm] = useState({
+    name: '',
+    description: '',
+    slug: ''
+  });
 
   useEffect(() => {
     loadContent();
     loadDigitalProducts();
+    loadCategories();
   }, []);
 
   const loadContent = async () => {
@@ -97,9 +106,34 @@ const ContentManagement = () => {
   };
 
   const loadDigitalProducts = async () => {
-    // TODO: Implementar tabela de produtos digitais no banco
-    // Por enquanto, vamos usar dados simulados
-    setDigitalProducts([]);
+    try {
+      const { data, error } = await supabase
+        .from('digital_products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setDigitalProducts(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar produtos digitais:', error);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('content_categories')
+        .select(`
+          *,
+          content (count)
+        `)
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
   };
 
   const handleCreateContent = async () => {
@@ -124,7 +158,9 @@ const ContentManagement = () => {
         description: '',
         content_type: 'video',
         category_id: '',
-        required_plan_id: ''
+        required_plan_id: '',
+        duration_minutes: 0,
+        difficulty_level: 'beginner'
       });
 
       loadContent();
@@ -142,16 +178,14 @@ const ContentManagement = () => {
   const handleCreateProduct = async () => {
     setLoading(true);
     try {
-      // Simular criação do produto
-      const newProduct: DigitalProduct = {
-        id: Date.now().toString(),
-        ...newProductForm,
-        is_active: true,
-        downloads: 0,
-        created_at: new Date().toISOString()
-      };
+      const { error } = await supabase
+        .from('digital_products')
+        .insert([{
+          ...newProductForm,
+          created_by: (await supabase.auth.getUser()).data.user?.id
+        }]);
 
-      setDigitalProducts(prev => [newProduct, ...prev]);
+      if (error) throw error;
 
       toast({
         title: "Produto criado",
@@ -165,10 +199,47 @@ const ContentManagement = () => {
         product_type: 'ebook',
         file_url: ''
       });
+
+      loadDigitalProducts();
     } catch (error) {
       toast({
         title: "Erro",
         description: "Erro ao criar produto",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    setLoading(true);
+    try {
+      // Gerar slug automaticamente baseado no nome
+      const slug = newCategoryForm.name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      const { error } = await supabase
+        .from('content_categories')
+        .insert([{
+          ...newCategoryForm,
+          slug
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Categoria criada",
+        description: "A nova categoria foi adicionada com sucesso.",
+      });
+
+      setNewCategoryForm({ name: '', description: '', slug: '' });
+      loadCategories();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar categoria",
         variant: "destructive",
       });
     } finally {
@@ -448,7 +519,7 @@ const ContentManagement = () => {
                           <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
                           <div className="flex items-center space-x-4 text-sm">
                             <span className="font-medium text-primary">R$ {product.price.toFixed(2)}</span>
-                            <span className="text-muted-foreground">{product.downloads} downloads</span>
+                            <span className="text-muted-foreground">{product.downloads_count} downloads</span>
                             <Badge variant={product.is_active ? 'default' : 'secondary'}>
                               {product.is_active ? 'Ativo' : 'Inativo'}
                             </Badge>
@@ -484,39 +555,67 @@ const ContentManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: 'Tutoriais', count: 12, description: 'Conteúdo educacional e tutoriais' },
-                  { name: 'Webinars', count: 8, description: 'Webinars e palestras ao vivo' },
-                  { name: 'Downloads', count: 15, description: 'Materiais para download' },
-                  { name: 'Exclusivo', count: 5, description: 'Conteúdo exclusivo para membros VIP' },
-                ].map((category) => (
-                  <div key={category.name} className="flex items-center justify-between p-4 border rounded-lg card-hover">
-                    <div>
-                      <h3 className="font-semibold">{category.name}</h3>
-                      <p className="text-sm text-muted-foreground">{category.description}</p>
-                      <Badge variant="outline" className="mt-2">
-                        {category.count} conteúdos
-                      </Badge>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+              {/* Formulário para nova categoria */}
+              <div className="space-y-4 mb-6 p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-semibold">Criar Nova Categoria</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category_name">Nome da Categoria</Label>
+                    <Input
+                      id="category_name"
+                      placeholder="Ex: Tutoriais"
+                      value={newCategoryForm.name}
+                      onChange={(e) => setNewCategoryForm({...newCategoryForm, name: e.target.value})}
+                    />
                   </div>
-                ))}
-              </div>
-              
-              <div className="mt-6">
-                <Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="category_description">Descrição</Label>
+                    <Input
+                      id="category_description"
+                      placeholder="Descreva a categoria..."
+                      value={newCategoryForm.description}
+                      onChange={(e) => setNewCategoryForm({...newCategoryForm, description: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleCreateCategory} disabled={loading}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Categoria
+                  {loading ? "Criando..." : "Criar Categoria"}
                 </Button>
               </div>
+
+              {/* Lista de categorias */}
+              {categories.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhuma categoria encontrada</h3>
+                  <p className="text-muted-foreground">
+                    Crie sua primeira categoria acima.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {categories.map((category) => (
+                    <div key={category.id} className="flex items-center justify-between p-4 border rounded-lg card-hover">
+                      <div>
+                        <h3 className="font-semibold">{category.name}</h3>
+                        <p className="text-sm text-muted-foreground">{category.description}</p>
+                        <Badge variant="outline" className="mt-2">
+                          {category.content?.length || 0} conteúdos
+                        </Badge>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -557,32 +656,12 @@ const ContentManagement = () => {
               <CardTitle>Arquivos Recentes</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: 'aula-01-introducao.mp4', size: '245MB', type: 'video', date: '2024-01-15' },
-                  { name: 'ebook-marketing.pdf', size: '12MB', type: 'pdf', date: '2024-01-14' },
-                  { name: 'template-landing.zip', size: '8MB', type: 'archive', date: '2024-01-13' },
-                ].map((file) => (
-                  <div key={file.name} className="flex items-center justify-between p-4 border rounded-lg card-hover">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        {getContentIcon(file.type)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{file.name}</p>
-                        <p className="text-sm text-muted-foreground">{file.size} • {file.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-center py-8">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Upload de arquivos em desenvolvimento</h3>
+                <p className="text-muted-foreground">
+                  Esta funcionalidade será implementada em breve. Por enquanto, use URLs diretas nos formulários acima.
+                </p>
               </div>
             </CardContent>
           </Card>

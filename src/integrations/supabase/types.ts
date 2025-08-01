@@ -22,8 +22,11 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          difficulty_level: string | null
+          duration_minutes: number | null
           id: string
           is_published: boolean | null
+          order_index: number | null
           required_plan_id: string | null
           thumbnail_url: string | null
           title: string
@@ -36,8 +39,11 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
           id?: string
           is_published?: boolean | null
+          order_index?: number | null
           required_plan_id?: string | null
           thumbnail_url?: string | null
           title: string
@@ -50,8 +56,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
           id?: string
           is_published?: boolean | null
+          order_index?: number | null
           required_plan_id?: string | null
           thumbnail_url?: string | null
           title?: string
@@ -97,6 +106,86 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      digital_products: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          downloads_count: number | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          product_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          downloads_count?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price?: number
+          product_type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          downloads_count?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          product_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_purchases: {
+        Row: {
+          created_at: string
+          id: string
+          payment_status: string
+          price_paid: number
+          product_id: string
+          purchase_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          price_paid: number
+          product_id: string
+          purchase_date?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payment_status?: string
+          price_paid?: number
+          product_id?: string
+          purchase_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "digital_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -198,6 +287,35 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_favorites: {
+        Row: {
+          content_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_favorites_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
             referencedColumns: ["id"]
           },
         ]

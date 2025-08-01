@@ -27,11 +27,11 @@ interface Content {
   description?: string;
   content_type: string;
   thumbnail_url?: string;
+  duration_minutes?: number;
+  difficulty_level?: string;
   content_categories?: {
     name: string;
   };
-  duration?: string;
-  difficulty?: string;
 }
 
 interface DigitalProduct {
@@ -39,48 +39,26 @@ interface DigitalProduct {
   name: string;
   description: string;
   price: number;
-  thumbnail: string;
-  type: string;
+  file_url: string;
+  product_type: string;
+  is_active: boolean;
+  downloads_count: number;
   owned: boolean;
 }
 
 const MemberContent = () => {
   const [content, setContent] = useState<Content[]>([]);
-  const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([
-    {
-      id: '1',
-      name: 'E-book: Guia Completo do Marketing Digital',
-      description: 'Manual completo com 200 páginas sobre estratégias de marketing digital moderno',
-      price: 49.90,
-      thumbnail: '/images/ebook-marketing.jpg',
-      type: 'ebook',
-      owned: false
-    },
-    {
-      id: '2',
-      name: 'Template: Landing Page Conversion',
-      description: 'Template HTML/CSS responsivo para landing pages de alta conversão',
-      price: 29.90,
-      thumbnail: '/images/template-landing.jpg',
-      type: 'template',
-      owned: true
-    },
-    {
-      id: '3',
-      name: 'Pacote de Ícones: Marketing & Negócios',
-      description: 'Coleção com 500+ ícones vetoriais para usar em seus projetos',
-      price: 19.90,
-      thumbnail: '/images/icons-pack.jpg',
-      type: 'icons',
-      owned: false
-    }
-  ]);
+  const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([]);
+  const [userFavorites, setUserFavorites] = useState<string[]>([]);
+  const [userPurchases, setUserPurchases] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadContent();
+    loadDigitalProducts();
+    loadUserData();
   }, []);
 
   const loadContent = async () => {
@@ -93,18 +71,10 @@ const MemberContent = () => {
           content_categories (name)
         `)
         .eq('is_published', true)
-        .order('created_at', { ascending: false });
+        .order('order_index', { ascending: true });
 
       if (error) throw error;
-      
-      // Simular dados adicionais para demonstração
-      const contentWithDetails = (data || []).map(item => ({
-        ...item,
-        duration: '15 min',
-        difficulty: 'Intermediário'
-      }));
-      
-      setContent(contentWithDetails);
+      setContent(data || []);
     } catch (error) {
       console.error('Erro ao carregar conteúdo:', error);
       toast({
@@ -114,6 +84,67 @@ const MemberContent = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDigitalProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('digital_products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Verificar quais produtos o usuário já comprou
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: purchases } = await supabase
+          .from('product_purchases')
+          .select('product_id')
+          .eq('user_id', user.id)
+          .eq('payment_status', 'approved');
+
+        const purchasedIds = purchases?.map(p => p.product_id) || [];
+        
+        const productsWithOwnership = (data || []).map(product => ({
+          ...product,
+          owned: purchasedIds.includes(product.id)
+        }));
+
+        setDigitalProducts(productsWithOwnership);
+      } else {
+        setDigitalProducts((data || []).map(product => ({ ...product, owned: false })));
+      }
+    } catch (error) {
+      console.error('Erro ao carregar produtos digitais:', error);
+    }
+  };
+
+  const loadUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Carregar favoritos
+      const { data: favorites } = await supabase
+        .from('user_favorites')
+        .select('content_id')
+        .eq('user_id', user.id);
+
+      setUserFavorites(favorites?.map(f => f.content_id) || []);
+
+      // Carregar compras
+      const { data: purchases } = await supabase
+        .from('product_purchases')
+        .select('product_id')
+        .eq('user_id', user.id)
+        .eq('payment_status', 'approved');
+
+      setUserPurchases(purchases?.map(p => p.product_id) || []);
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
     }
   };
 
@@ -136,7 +167,7 @@ const MemberContent = () => {
         return <BookOpen className="h-5 w-5" />;
       case 'template':
         return <Zap className="h-5 w-5" />;
-      case 'icons':
+      case 'course':
         return <Target className="h-5 w-5" />;
       default:
         return <ShoppingBag className="h-5 w-5" />;
@@ -152,10 +183,45 @@ const MemberContent = () => {
   });
 
   const handlePurchaseProduct = (productId: string) => {
+    // Integrar com sistema de pagamento real
     toast({
       title: "Redirecionando para pagamento",
       description: "Você será redirecionado para completar a compra.",
     });
+  };
+
+  const toggleFavorite = async (contentId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (userFavorites.includes(contentId)) {
+        // Remover dos favoritos
+        await supabase
+          .from('user_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('content_id', contentId);
+        
+        setUserFavorites(prev => prev.filter(id => id !== contentId));
+        toast({ title: "Removido dos favoritos" });
+      } else {
+        // Adicionar aos favoritos
+        await supabase
+          .from('user_favorites')
+          .insert({ user_id: user.id, content_id: contentId });
+        
+        setUserFavorites(prev => [...prev, contentId]);
+        toast({ title: "Adicionado aos favoritos" });
+      }
+    } catch (error) {
+      console.error('Erro ao gerenciar favoritos:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar favoritos",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -246,7 +312,7 @@ const MemberContent = () => {
                     <div className="absolute bottom-3 left-3">
                       <Badge variant="secondary" className="bg-black/50 text-white">
                         <Clock className="h-3 w-3 mr-1" />
-                        {item.duration}
+                        {item.duration_minutes ? `${item.duration_minutes} min` : '15 min'}
                       </Badge>
                     </div>
                   </div>
@@ -265,7 +331,7 @@ const MemberContent = () => {
                         </Badge>
                       )}
                       <Badge variant="secondary">
-                        {item.difficulty}
+                        {item.difficulty_level || 'Iniciante'}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -276,8 +342,12 @@ const MemberContent = () => {
                         <Play className="h-4 w-4 mr-2" />
                         Assistir
                       </Button>
-                      <Button variant="outline" size="icon">
-                        <Star className="h-4 w-4" />
+                      <Button 
+                        variant={userFavorites.includes(item.id) ? "default" : "outline"} 
+                        size="icon"
+                        onClick={() => toggleFavorite(item.id)}
+                      >
+                        <Star className={`h-4 w-4 ${userFavorites.includes(item.id) ? 'fill-current' : ''}`} />
                       </Button>
                     </div>
                   </CardContent>
@@ -307,7 +377,7 @@ const MemberContent = () => {
                 <div className="relative">
                   <div className="w-full h-48 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-t-lg flex items-center justify-center">
                     <div className="p-4 bg-primary/10 rounded-full">
-                      {getProductIcon(product.type)}
+                      {getProductIcon(product.product_type)}
                     </div>
                   </div>
                   {product.owned && (
@@ -328,7 +398,7 @@ const MemberContent = () => {
                     <span className="text-2xl font-bold text-primary">
                       R$ {product.price.toFixed(2)}
                     </span>
-                    <Badge variant="outline">{product.type}</Badge>
+                    <Badge variant="outline">{product.product_type}</Badge>
                   </div>
                 </CardHeader>
                 
@@ -373,7 +443,7 @@ const MemberContent = () => {
                     <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="p-2 bg-primary/10 rounded-lg">
-                        {getProductIcon(product.type)}
+                        {getProductIcon(product.product_type)}
                       </div>
                       <div>
                           <h3 className="font-semibold">{product.name}</h3>
@@ -414,13 +484,60 @@ const MemberContent = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nenhum favorito ainda</h3>
-                <p className="text-muted-foreground">
-                  Clique no ícone de estrela nas aulas para adicioná-las aos favoritos.
-                </p>
-              </div>
+              {userFavorites.length === 0 ? (
+                <div className="text-center py-8">
+                  <Star className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum favorito ainda</h3>
+                  <p className="text-muted-foreground">
+                    Clique no ícone de estrela nas aulas para adicioná-las aos favoritos.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {content
+                    .filter(item => userFavorites.includes(item.id))
+                    .map((item) => (
+                      <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                        <div className="relative">
+                          {item.thumbnail_url ? (
+                            <img
+                              src={item.thumbnail_url}
+                              alt={item.title}
+                              className="w-full h-32 object-cover rounded-t-lg"
+                            />
+                          ) : (
+                            <div className="w-full h-32 bg-gradient-to-br from-primary/20 to-primary/5 rounded-t-lg flex items-center justify-center">
+                              {getContentIcon(item.content_type)}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">{item.title}</CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {item.description || 'Sem descrição disponível'}
+                          </CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent>
+                          <div className="flex space-x-2">
+                            <Button size="sm" className="flex-1">
+                              <Play className="h-4 w-4 mr-2" />
+                              Assistir
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => toggleFavorite(item.id)}
+                            >
+                              <Star className="h-4 w-4 fill-current" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
