@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   CreditCard, 
   DollarSign, 
@@ -37,31 +38,30 @@ const PaymentSettings = () => {
   const handleSaveMercadoPago = async () => {
     setLoading(true);
     try {
-      // Test the configuration by calling our edge function
-      const testResponse = await fetch(`https://yqclbakmgmixymjhewzh.supabase.co/functions/v1/test-mercadopago-config`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+      // Test the configuration by calling our edge function with auth
+      const { data, error } = await supabase.functions.invoke('test-mercadopago-config');
       
-      if (testResponse.ok) {
+      if (error) {
+        throw error;
+      }
+      
+      if (data.configured) {
         toast({
-          title: "Configurações do Mercado Pago testadas",
-          description: "As credenciais estão funcionando corretamente.",
+          title: "✅ Mercado Pago configurado com sucesso!",
+          description: `Conectado com o usuário: ${data.email}`,
         });
       } else {
-        const errorData = await testResponse.json();
         toast({
-          title: "Erro na configuração",
-          description: errorData.error || "Erro ao testar configurações do Mercado Pago",
+          title: "❌ Erro na configuração",
+          description: data.error || "Token do Mercado Pago não está funcionando",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Test error:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao testar configurações do Mercado Pago",
+        title: "❌ Erro ao testar",
+        description: error.message || "Erro ao testar configurações do Mercado Pago",
         variant: "destructive",
       });
     } finally {
@@ -210,44 +210,24 @@ const PaymentSettings = () => {
                 <div className="space-y-2">
                   <Label>Status da Conexão</Label>
                   <div className="flex items-center space-x-2">
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                    <span className="text-sm text-red-500">Não Configurado</span>
-                    <p className="text-xs text-muted-foreground">Configure o MERCADO_PAGO_ACCESS_TOKEN nas variáveis secretas</p>
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <span className="text-sm text-green-600">Pronto para testar</span>
+                    <p className="text-xs text-muted-foreground">Clique em "Testar Configuração" para verificar</p>
                   </div>
                 </div>
               </div>
 
               <Separator />
 
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-yellow-800">Configure o Mercado Pago</h4>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      Para que os pagamentos funcionem, você precisa configurar o MERCADO_PAGO_ACCESS_TOKEN nas variáveis secretas do Supabase.
-                    </p>
-                    <p className="text-sm text-yellow-700 mt-2">
-                      1. Acesse o painel do Mercado Pago e copie seu Access Token<br/>
-                      2. Configure a variável secreta MERCADO_PAGO_ACCESS_TOKEN no Supabase
+                    <h4 className="font-semibold text-green-800">Token Configurado!</h4>
+                    <p className="text-sm text-green-700 mt-1">
+                      O MERCADO_PAGO_ACCESS_TOKEN foi configurado no Supabase. Clique em "Testar Configuração" para verificar se está funcionando.
                     </p>
                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="testToken">Testar Access Token (Opcional)</Label>
-                  <Input
-                    id="testToken"
-                    type="password"
-                    placeholder="Cole seu access token aqui para testar"
-                    value=""
-                    onChange={() => {}}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Este campo é apenas para teste. Configure o token nas variáveis secretas.
-                  </p>
                 </div>
               </div>
 
