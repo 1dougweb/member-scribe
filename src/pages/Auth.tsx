@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -32,9 +32,19 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) {
+          let errorMessage = error.message;
+          let errorTitle = "Erro no login";
+          
+          if (error.message === "Email not confirmed") {
+            errorTitle = "Email não confirmado";
+            errorMessage = "Por favor, verifique seu email e clique no link de confirmação antes de fazer login.";
+          } else if (error.message === "Invalid login credentials") {
+            errorMessage = "Email ou senha incorretos.";
+          }
+          
           toast({
-            title: "Erro no login",
-            description: error.message,
+            title: errorTitle,
+            description: errorMessage,
             variant: "destructive",
           });
         } else {
@@ -46,15 +56,21 @@ const Auth = () => {
       } else {
         const { error } = await signUp(email, password, fullName);
         if (error) {
+          let errorMessage = error.message;
+          
+          if (error.message === "User already registered") {
+            errorMessage = "Este email já está cadastrado. Tente fazer login.";
+          }
+          
           toast({
             title: "Erro no cadastro",
-            description: error.message,
+            description: errorMessage,
             variant: "destructive",
           });
         } else {
           toast({
             title: "Cadastro realizado!",
-            description: "Verifique seu email para confirmar a conta.",
+            description: "Verifique seu email para confirmar a conta antes de fazer login.",
           });
         }
       }
