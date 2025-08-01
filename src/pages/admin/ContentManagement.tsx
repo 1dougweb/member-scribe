@@ -19,7 +19,10 @@ import {
   Video,
   Download,
   Image,
-  ShoppingBag
+  ShoppingBag,
+  Package,
+  Zap,
+  Target
 } from 'lucide-react';
 
 interface Content {
@@ -44,33 +47,16 @@ interface DigitalProduct {
   name: string;
   description: string;
   price: number;
-  downloads: number;
   file_url: string;
-  active: boolean;
+  product_type: string;
+  is_active: boolean;
+  downloads: number;
+  created_at: string;
 }
 
 const ContentManagement = () => {
   const [content, setContent] = useState<Content[]>([]);
-  const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([
-    {
-      id: '1',
-      name: 'E-book: Guia Completo do Marketing Digital',
-      description: 'Manual completo com 200 páginas sobre estratégias de marketing digital',
-      price: 49.90,
-      downloads: 127,
-      file_url: '/files/ebook-marketing.pdf',
-      active: true
-    },
-    {
-      id: '2', 
-      name: 'Template: Landing Page Conversion',
-      description: 'Template HTML/CSS para landing pages de alta conversão',
-      price: 29.90,
-      downloads: 89,
-      file_url: '/files/template-landing.zip',
-      active: true
-    }
-  ]);
+  const [digitalProducts, setDigitalProducts] = useState<DigitalProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [newContentForm, setNewContentForm] = useState({
     title: '',
@@ -79,9 +65,17 @@ const ContentManagement = () => {
     category_id: '',
     required_plan_id: ''
   });
+  const [newProductForm, setNewProductForm] = useState({
+    name: '',
+    description: '',
+    price: 0,
+    product_type: 'ebook',
+    file_url: ''
+  });
 
   useEffect(() => {
     loadContent();
+    loadDigitalProducts();
   }, []);
 
   const loadContent = async () => {
@@ -100,6 +94,12 @@ const ContentManagement = () => {
     } catch (error) {
       console.error('Erro ao carregar conteúdo:', error);
     }
+  };
+
+  const loadDigitalProducts = async () => {
+    // TODO: Implementar tabela de produtos digitais no banco
+    // Por enquanto, vamos usar dados simulados
+    setDigitalProducts([]);
   };
 
   const handleCreateContent = async () => {
@@ -139,6 +139,43 @@ const ContentManagement = () => {
     }
   };
 
+  const handleCreateProduct = async () => {
+    setLoading(true);
+    try {
+      // Simular criação do produto
+      const newProduct: DigitalProduct = {
+        id: Date.now().toString(),
+        ...newProductForm,
+        is_active: true,
+        downloads: 0,
+        created_at: new Date().toISOString()
+      };
+
+      setDigitalProducts(prev => [newProduct, ...prev]);
+
+      toast({
+        title: "Produto criado",
+        description: "O novo produto digital foi adicionado com sucesso.",
+      });
+
+      setNewProductForm({
+        name: '',
+        description: '',
+        price: 0,
+        product_type: 'ebook',
+        file_url: ''
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar produto",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getContentIcon = (type: string) => {
     switch (type) {
       case 'video':
@@ -149,6 +186,19 @@ const ContentManagement = () => {
         return <Image className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getProductIcon = (type: string) => {
+    switch (type) {
+      case 'ebook':
+        return <BookOpen className="h-5 w-5" />;
+      case 'template':
+        return <Zap className="h-5 w-5" />;
+      case 'course':
+        return <Target className="h-5 w-5" />;
+      default:
+        return <Package className="h-5 w-5" />;
     }
   };
 
@@ -198,7 +248,7 @@ const ContentManagement = () => {
                   <Label htmlFor="content_type">Tipo de Conteúdo</Label>
                   <select 
                     id="content_type"
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border rounded-md bg-background"
                     value={newContentForm.content_type}
                     onChange={(e) => setNewContentForm({...newContentForm, content_type: e.target.value})}
                   >
@@ -248,9 +298,9 @@ const ContentManagement = () => {
               ) : (
                 <div className="space-y-4">
                   {content.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg card-hover">
                       <div className="flex items-center space-x-4">
-                        <div className="p-2 bg-muted rounded-lg">
+                        <div className="p-2 bg-primary/10 rounded-lg">
                           {getContentIcon(item.content_type)}
                         </div>
                         <div>
@@ -292,57 +342,134 @@ const ContentManagement = () => {
 
         {/* Produtos Digitais */}
         <TabsContent value="products" className="space-y-6">
+          {/* Formulário de Novo Produto */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <ShoppingBag className="h-5 w-5" />
-                <span>Produtos Digitais</span>
+                <span>Adicionar Produto Digital</span>
               </CardTitle>
               <CardDescription>
-                Gerencie e-books, templates, cursos e outros produtos digitais para venda
+                Crie um novo produto digital para venda
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="product_name">Nome do Produto</Label>
+                  <Input
+                    id="product_name"
+                    placeholder="Ex: E-book Marketing Digital"
+                    value={newProductForm.name}
+                    onChange={(e) => setNewProductForm({...newProductForm, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product_type">Tipo de Produto</Label>
+                  <select 
+                    id="product_type"
+                    className="w-full px-3 py-2 border rounded-md bg-background"
+                    value={newProductForm.product_type}
+                    onChange={(e) => setNewProductForm({...newProductForm, product_type: e.target.value})}
+                  >
+                    <option value="ebook">E-book</option>
+                    <option value="template">Template</option>
+                    <option value="course">Curso</option>
+                    <option value="software">Software</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="product_price">Preço (R$)</Label>
+                  <Input
+                    id="product_price"
+                    type="number"
+                    step="0.01"
+                    placeholder="29.90"
+                    value={newProductForm.price}
+                    onChange={(e) => setNewProductForm({...newProductForm, price: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="file_url">URL do Arquivo</Label>
+                  <Input
+                    id="file_url"
+                    placeholder="https://exemplo.com/arquivo.pdf"
+                    value={newProductForm.file_url}
+                    onChange={(e) => setNewProductForm({...newProductForm, file_url: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="product_description">Descrição</Label>
+                <Textarea
+                  id="product_description"
+                  placeholder="Descreva seu produto digital..."
+                  value={newProductForm.description}
+                  onChange={(e) => setNewProductForm({...newProductForm, description: e.target.value})}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleCreateProduct} disabled={loading}>
+                  {loading ? "Criando..." : "Criar Produto"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lista de Produtos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Produtos Digitais</CardTitle>
+              <CardDescription>
+                Gerencie seus produtos digitais
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {digitalProducts.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between p-6 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="p-3 bg-primary/10 rounded-lg">
-                        <ShoppingBag className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
-                        <div className="flex items-center space-x-4 text-sm">
-                          <span className="font-medium text-green-600">R$ {product.price.toFixed(2)}</span>
-                          <span className="text-muted-foreground">{product.downloads} downloads</span>
-                          <Badge variant={product.active ? 'default' : 'secondary'}>
-                            {product.active ? 'Ativo' : 'Inativo'}
-                          </Badge>
+              {digitalProducts.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Nenhum produto encontrado</h3>
+                  <p className="text-muted-foreground">
+                    Comece criando seu primeiro produto digital acima.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {digitalProducts.map((product) => (
+                    <div key={product.id} className="flex items-center justify-between p-6 border rounded-lg card-hover">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-primary/10 rounded-lg">
+                          {getProductIcon(product.product_type)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">{product.description}</p>
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className="font-medium text-primary">R$ {product.price.toFixed(2)}</span>
+                            <span className="text-muted-foreground">{product.downloads} downloads</span>
+                            <Badge variant={product.is_active ? 'default' : 'secondary'}>
+                              {product.is_active ? 'Ativo' : 'Inativo'}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Produto Digital
-                </Button>
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -364,7 +491,7 @@ const ContentManagement = () => {
                   { name: 'Downloads', count: 15, description: 'Materiais para download' },
                   { name: 'Exclusivo', count: 5, description: 'Conteúdo exclusivo para membros VIP' },
                 ].map((category) => (
-                  <div key={category.name} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={category.name} className="flex items-center justify-between p-4 border rounded-lg card-hover">
                     <div>
                       <h3 className="font-semibold">{category.name}</h3>
                       <p className="text-sm text-muted-foreground">{category.description}</p>
@@ -407,7 +534,7 @@ const ContentManagement = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center hover:border-primary/50 transition-colors">
                 <Upload className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Arraste e solte seus arquivos aqui</h3>
                 <p className="text-muted-foreground mb-4">
@@ -436,9 +563,9 @@ const ContentManagement = () => {
                   { name: 'ebook-marketing.pdf', size: '12MB', type: 'pdf', date: '2024-01-14' },
                   { name: 'template-landing.zip', size: '8MB', type: 'archive', date: '2024-01-13' },
                 ].map((file) => (
-                  <div key={file.name} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div key={file.name} className="flex items-center justify-between p-4 border rounded-lg card-hover">
                     <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-muted rounded-lg">
+                      <div className="p-2 bg-primary/10 rounded-lg">
                         {getContentIcon(file.type)}
                       </div>
                       <div>

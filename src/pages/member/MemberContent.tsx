@@ -16,7 +16,9 @@ import {
   ShoppingBag,
   FileText,
   Video,
-  Image
+  Image,
+  Zap,
+  Target
 } from 'lucide-react';
 
 interface Content {
@@ -131,13 +133,13 @@ const MemberContent = () => {
   const getProductIcon = (type: string) => {
     switch (type) {
       case 'ebook':
-        return '📚';
+        return <BookOpen className="h-5 w-5" />;
       case 'template':
-        return '🎨';
+        return <Zap className="h-5 w-5" />;
       case 'icons':
-        return '🎯';
+        return <Target className="h-5 w-5" />;
       default:
-        return '📦';
+        return <ShoppingBag className="h-5 w-5" />;
     }
   };
 
@@ -303,8 +305,10 @@ const MemberContent = () => {
             {digitalProducts.map((product) => (
               <Card key={product.id} className="hover:shadow-lg transition-shadow">
                 <div className="relative">
-                  <div className="w-full h-48 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-t-lg flex items-center justify-center text-4xl">
-                    {getProductIcon(product.type)}
+                  <div className="w-full h-48 bg-gradient-to-br from-secondary/20 to-secondary/5 rounded-t-lg flex items-center justify-center">
+                    <div className="p-4 bg-primary/10 rounded-full">
+                      {getProductIcon(product.type)}
+                    </div>
                   </div>
                   {product.owned && (
                     <div className="absolute top-3 right-3">
@@ -367,9 +371,11 @@ const MemberContent = () => {
                   .filter(product => product.owned)
                   .map((product) => (
                     <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-2xl">{getProductIcon(product.type)}</div>
-                        <div>
+                    <div className="flex items-center space-x-4">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        {getProductIcon(product.type)}
+                      </div>
+                      <div>
                           <h3 className="font-semibold">{product.name}</h3>
                           <p className="text-sm text-muted-foreground">Adquirido em 15/01/2024</p>
                         </div>

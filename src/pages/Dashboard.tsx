@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { toast } from '@/hooks/use-toast';
-import { LogOut } from 'lucide-react';
+import { LogOut, Users, FileText, CreditCard, Crown, BookOpen, CheckCircle, TrendingUp } from 'lucide-react';
 
 interface UserRole {
   role: 'admin' | 'member' | 'guest';
@@ -151,50 +151,50 @@ const DashboardOverview = ({ userRole }: { userRole: string }) => {
 const AdminOverview = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Total de Membros</p>
             <p className="text-2xl font-bold">23</p>
           </div>
-          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-            👥
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <Users className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
       
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Conteúdos</p>
             <p className="text-2xl font-bold">12</p>
           </div>
-          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-            📚
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <FileText className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
       
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Receita Mensal</p>
             <p className="text-2xl font-bold">R$ 2.340</p>
           </div>
-          <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            💰
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <CreditCard className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
       
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Assinaturas Ativas</p>
             <p className="text-2xl font-bold">18</p>
           </div>
-          <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-            ⭐
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <Crown className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
@@ -205,38 +205,38 @@ const AdminOverview = () => {
 const MemberOverview = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Aulas Concluídas</p>
             <p className="text-2xl font-bold">8</p>
           </div>
-          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-            ✅
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <CheckCircle className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
       
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Próxima Aula</p>
             <p className="text-lg font-semibold">Marketing Digital</p>
           </div>
-          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-            📖
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <BookOpen className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
       
-      <div className="bg-card p-6 rounded-lg border">
+      <div className="bg-card p-6 rounded-lg border card-hover">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">Progresso Geral</p>
             <p className="text-2xl font-bold">67%</p>
           </div>
-          <div className="h-8 w-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            📊
+          <div className="h-8 w-8 bg-primary/10 rounded-full flex items-center justify-center">
+            <TrendingUp className="h-4 w-4 text-primary" />
           </div>
         </div>
       </div>
