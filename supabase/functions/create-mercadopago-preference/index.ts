@@ -13,6 +13,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== MERCADO PAGO PREFERENCE CREATION STARTED ===');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -26,15 +28,21 @@ serve(async (req) => {
     // Get user from JWT
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) {
+      console.error('Authentication error:', userError);
       throw new Error('Unauthorized')
     }
+    console.log('User authenticated:', user.email);
 
-    const { plan_id, plan_name, price } = await req.json()
+    const requestBody = await req.json()
+    console.log('Request body:', requestBody);
+    const { plan_id, plan_name, price } = requestBody
 
     const mercadoPagoAccessToken = Deno.env.get('MERCADO_PAGO_ACCESS_TOKEN')
     if (!mercadoPagoAccessToken) {
+      console.error('MERCADO_PAGO_ACCESS_TOKEN not configured');
       throw new Error('Mercado Pago access token not configured')
     }
+    console.log('Access token found:', mercadoPagoAccessToken.substring(0, 10) + '...');
 
     // Create preference for Mercado Pago
     const preference = {
@@ -58,6 +66,8 @@ serve(async (req) => {
       external_reference: `${user.id}_${plan_id}`,
       notification_url: `${Deno.env.get('SUPABASE_URL')}/functions/v1/mercadopago-webhook`
     }
+    
+    console.log('Creating preference:', preference);
 
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
@@ -68,13 +78,16 @@ serve(async (req) => {
       body: JSON.stringify(preference)
     })
 
+    console.log('MercadoPago response status:', response.status);
+
     if (!response.ok) {
       const errorData = await response.text()
       console.error('MercadoPago API error:', errorData)
-      throw new Error('Failed to create payment preference')
+      throw new Error(`Failed to create payment preference: ${errorData}`)
     }
 
     const preferenceData = await response.json()
+    console.log('Preference created successfully:', preferenceData.id);
 
     return new Response(
       JSON.stringify({ 

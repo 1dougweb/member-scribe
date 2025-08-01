@@ -29,6 +29,9 @@ const MercadoPagoCheckout = ({ plan, billingPeriod }: MercadoPagoCheckoutProps) 
     setLoading(true);
     
     try {
+      console.log('Iniciando checkout para plano:', plan.name);
+      console.log('Preço:', price);
+      
       const { data, error } = await supabase.functions.invoke('create-mercadopago-preference', {
         body: {
           plan_id: plan.id,
@@ -37,18 +40,39 @@ const MercadoPagoCheckout = ({ plan, billingPeriod }: MercadoPagoCheckoutProps) 
         }
       });
 
-      if (error) throw error;
+      console.log('Resposta da função:', { data, error });
+
+      if (error) {
+        console.error('Erro da edge function:', error);
+        throw error;
+      }
 
       // Open MercadoPago checkout in new tab
-      if (data.init_point) {
+      if (data?.init_point) {
+        console.log('Abrindo checkout:', data.init_point);
         window.open(data.init_point, '_blank');
+        toast({
+          title: "Redirecionando para pagamento",
+          description: "Uma nova aba foi aberta com o checkout do Mercado Pago.",
+        });
+      } else {
+        throw new Error('URL de checkout não recebida');
       }
       
     } catch (error) {
       console.error('Checkout error:', error);
+      
+      let errorMessage = "Erro ao iniciar processo de pagamento. Tente novamente.";
+      
+      if (error.message?.includes('access token not configured')) {
+        errorMessage = "Mercado Pago não configurado. Entre em contato com o administrador.";
+      } else if (error.message?.includes('Unauthorized')) {
+        errorMessage = "Você precisa estar logado para fazer uma assinatura.";
+      }
+      
       toast({
         title: "Erro no checkout",
-        description: "Erro ao iniciar processo de pagamento. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

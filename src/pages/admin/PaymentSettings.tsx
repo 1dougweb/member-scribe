@@ -37,17 +37,31 @@ const PaymentSettings = () => {
   const handleSaveMercadoPago = async () => {
     setLoading(true);
     try {
-      // Simular salvamento das configurações do Mercado Pago
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast({
-        title: "Configurações do Mercado Pago salvas",
-        description: "As credenciais foram atualizadas com sucesso.",
+      // Test the configuration by calling our edge function
+      const testResponse = await fetch(`https://yqclbakmgmixymjhewzh.supabase.co/functions/v1/test-mercadopago-config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
+      
+      if (testResponse.ok) {
+        toast({
+          title: "Configurações do Mercado Pago testadas",
+          description: "As credenciais estão funcionando corretamente.",
+        });
+      } else {
+        const errorData = await testResponse.json();
+        toast({
+          title: "Erro na configuração",
+          description: errorData.error || "Erro ao testar configurações do Mercado Pago",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao salvar configurações do Mercado Pago",
+        description: "Erro ao testar configurações do Mercado Pago",
         variant: "destructive",
       });
     } finally {
@@ -196,52 +210,55 @@ const PaymentSettings = () => {
                 <div className="space-y-2">
                   <Label>Status da Conexão</Label>
                   <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Conectado</span>
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-red-500">Não Configurado</span>
+                    <p className="text-xs text-muted-foreground">Configure o MERCADO_PAGO_ACCESS_TOKEN nas variáveis secretas</p>
                   </div>
                 </div>
               </div>
 
               <Separator />
 
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold text-yellow-800">Configure o Mercado Pago</h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Para que os pagamentos funcionem, você precisa configurar o MERCADO_PAGO_ACCESS_TOKEN nas variáveis secretas do Supabase.
+                    </p>
+                    <p className="text-sm text-yellow-700 mt-2">
+                      1. Acesse o painel do Mercado Pago e copie seu Access Token<br/>
+                      2. Configure a variável secreta MERCADO_PAGO_ACCESS_TOKEN no Supabase
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="publicKey">Chave Pública</Label>
+                  <Label htmlFor="testToken">Testar Access Token (Opcional)</Label>
                   <Input
-                    id="publicKey"
+                    id="testToken"
                     type="password"
-                    placeholder="TEST-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    value={mercadoPagoConfig.publicKey}
-                    onChange={(e) => setMercadoPagoConfig({...mercadoPagoConfig, publicKey: e.target.value})}
+                    placeholder="Cole seu access token aqui para testar"
+                    value=""
+                    onChange={() => {}}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="accessToken">Access Token</Label>
-                  <Input
-                    id="accessToken"
-                    type="password"
-                    placeholder="TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    value={mercadoPagoConfig.accessToken}
-                    onChange={(e) => setMercadoPagoConfig({...mercadoPagoConfig, accessToken: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="webhookUrl">URL do Webhook</Label>
-                  <Input
-                    id="webhookUrl"
-                    placeholder="https://suaapi.com/webhooks/mercadopago"
-                    value={mercadoPagoConfig.webhookUrl}
-                    onChange={(e) => setMercadoPagoConfig({...mercadoPagoConfig, webhookUrl: e.target.value})}
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este campo é apenas para teste. Configure o token nas variáveis secretas.
+                  </p>
                 </div>
               </div>
 
               <div className="flex justify-end space-x-4">
-                <Button variant="outline">Testar Conexão</Button>
-                <Button onClick={handleSaveMercadoPago} disabled={loading}>
-                  {loading ? "Salvando..." : "Salvar Configurações"}
+                <Button variant="outline" onClick={handleSaveMercadoPago}>
+                  Testar Configuração
+                </Button>
+                <Button variant="default" asChild>
+                  <a href="https://supabase.com/dashboard/project/yqclbakmgmixymjhewzh/settings/functions" target="_blank">
+                    Configurar Variáveis Secretas
+                  </a>
                 </Button>
               </div>
             </CardContent>
