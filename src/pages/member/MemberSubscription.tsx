@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import MercadoPagoCheckout from '@/components/MercadoPagoCheckout';
 import { 
   CreditCard, 
   Calendar,
@@ -117,12 +118,36 @@ const MemberSubscription = () => {
     }
   };
 
-  const handleSubscribe = async (planId: string) => {
-    toast({
-      title: "Redirecionando para pagamento",
-      description: "Você será redirecionado para o Mercado Pago para completar sua assinatura.",
-    });
-    // Aqui seria implementada a integração com Mercado Pago
+  const handleSubscribe = async (plan: Plan) => {
+    try {
+      const price = billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly;
+      
+      const { data, error } = await supabase.functions.invoke('create-mercadopago-preference', {
+        body: {
+          plan_id: plan.id,
+          plan_name: plan.name,
+          price: price
+        }
+      });
+
+      if (error) throw error;
+
+      // Open MercadoPago checkout in new tab
+      if (data.init_point) {
+        window.open(data.init_point, '_blank');
+        toast({
+          title: "Redirecionando para pagamento",
+          description: "Uma nova aba foi aberta com o checkout do Mercado Pago.",
+        });
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: "Erro no checkout",
+        description: "Erro ao iniciar processo de pagamento. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancelSubscription = async () => {
@@ -272,58 +297,12 @@ const MemberSubscription = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {availablePlans.map((plan) => (
-            <Card 
-              key={plan.id} 
-              className={`relative ${plan.popular ? 'border-primary shadow-lg' : ''}`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge variant="default" className="bg-primary">
-                    <Star className="h-3 w-3 mr-1" />
-                    Mais Popular
-                  </Badge>
-                </div>
-              )}
-              
-              <CardHeader className="text-center">
-                <CardTitle className="text-lg">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="py-4">
-                  <span className="text-3xl font-bold">
-                    R$ {(billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly / 12).toFixed(2)}
-                  </span>
-                  <span className="text-muted-foreground">/mês</span>
-                  {billingPeriod === 'yearly' && (
-                    <div className="text-sm text-primary font-medium">
-                      Faturado anualmente (R$ {plan.price_yearly.toFixed(2)})
-                    </div>
-                  )}
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                
-                <Button 
-                  className="w-full"
-                  variant={plan.popular ? 'default' : 'outline'}
-                  onClick={() => handleSubscribe(plan.id)}
-                  disabled={subscription?.subscription_plans.name === plan.name}
-                >
-                  {subscription?.subscription_plans.name === plan.name ? 
-                    'Plano Atual' : 
-                    plan.price_monthly === 0 ? 'Gratuito' : 'Assinar Agora'
-                  }
-                </Button>
-              </CardContent>
-            </Card>
+            <div key={plan.id} className={`relative ${plan.popular ? 'scale-105' : ''}`}>
+              <MercadoPagoCheckout
+                plan={plan}
+                billingPeriod={billingPeriod}
+              />
+            </div>
           ))}
         </div>
       </div>
